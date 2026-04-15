@@ -210,3 +210,70 @@ void optimize_tac() {
         }
     }
 }
+
+/* Add these functions to the bottom of your tac.c file */
+
+IntList makelist(int index) {
+    IntList res;
+    res.count = 1;
+    res.list[0] = index;
+    return res;
+}
+
+IntList merge(IntList l1, IntList l2) {
+    IntList res;
+    res.count = 0;
+    for(int i = 0; i < l1.count; i++) res.list[res.count++] = l1.list[i];
+    for(int i = 0; i < l2.count; i++) res.list[res.count++] = l2.list[i];
+    return res;
+}
+
+void backpatch(IntList l, int target) {
+    for(int i = 0; i < l.count; i++) {
+        // Temporarily store the target line number as a string in the 'res' field
+        sprintf(tac_table[l.list[i]].res, "%d", target);
+    }
+}
+
+/* THE BRIDGE: Converts line numbers to Labels for Codegen */
+void finish_backpatching() {
+    char labels[2000][20] = {0};
+    
+    // Pass 1: Identify targets and assign labels to them
+    for(int i = 0; i < tac_count; i++) {
+        if(strcmp(tac_table[i].op, "goto") == 0 || strcmp(tac_table[i].op, "ifFalse") == 0) {
+            int target = atoi(tac_table[i].res);
+            if(target >= 0 && strcmp(tac_table[i].res, "-1") != 0) { // Valid line number
+                if(labels[target][0] == '\0') {
+                    sprintf(labels[target], "L%d", ++label_count); // Generate L1, L2, etc.
+                }
+                strcpy(tac_table[i].res, labels[target]); // Replace index with label
+            }
+        }
+    }
+    
+    // Pass 2: Rebuild the table, injecting the "label" operations at the right lines
+    TAC new_table[2000];
+    int new_count = 0;
+    
+    for(int i = 0; i <= tac_count; i++) {
+        // If this line number was targeted, insert a label first
+        if(labels[i][0] != '\0') {
+            strcpy(new_table[new_count].op, "label");
+            strcpy(new_table[new_count].arg1, "");
+            strcpy(new_table[new_count].arg2, "");
+            strcpy(new_table[new_count].res, labels[i]);
+            new_count++;
+        }
+        // Then copy the actual instruction
+        if(i < tac_count) {
+            new_table[new_count++] = tac_table[i];
+        }
+    }
+    
+    // Replace old table with the new structurally sound table
+    for(int i = 0; i < new_count; i++) {
+        tac_table[i] = new_table[i];
+    }
+    tac_count = new_count;
+}

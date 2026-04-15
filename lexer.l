@@ -1,4 +1,5 @@
 %{
+#include "tac.h"      /* <--- ADD THIS LINE HERE */
 #include "y.tab.h"
 #include <stdio.h>
 #include <string.h>

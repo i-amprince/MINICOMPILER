@@ -12,16 +12,24 @@ int yylex();
 %union {
     char* str;
     int num;
-    float fnum; /* Added: Support for floating-point numbers */
+    float fnum;
     struct {
         int dtype;
         char place[20];
     } expr_val;
-    char** lbls;
+    struct {                /* NEW: Added for boolean backpatching */
+        IntList truelist;
+        IntList falselist;
+    } cond;
+    IntList intlist;        /* NEW: Added for jump tracking */
+    int instr;              /* NEW: Added for line indexing */
 }
 
-%type <expr_val> expr condition
 %type <str> if_prefix
+%type <expr_val> expr
+%type <cond> condition
+%type <instr> M
+%type <intlist> N
 
 %token <num> NUM
 %token <fnum> FLOAT_NUM /* Added: Token for floating-point numbers */
@@ -135,87 +143,114 @@ if_prefix:
     }
     ;
 
+M: /* empty */ { $$ = tac_count; } ;
+N: /* empty */ { $$ = makelist(tac_count); emit("goto", "", "", "-1"); } ;
+
+
 statement:
     declaration
     | assign_expr ';'
-    | if_prefix statement %prec LOWER_THAN_ELSE { 
-        emit("label", "", "", $1); 
+    | IF '(' condition ')' M statement %prec LOWER_THAN_ELSE { 
+        backpatch($3.truelist, $5);
+        backpatch($3.falselist, tac_count); 
     }
-    | if_prefix statement ELSE { 
-        $<str>$ = new_label(); 
-        emit("goto", "", "", $<str>$); 
-        emit("label", "", "", $1); 
-    } statement { 
-        emit("label", "", "", $<str>4); 
+    | IF '(' condition ')' M statement ELSE N M statement { 
+        backpatch($3.truelist, $5);
+        backpatch($3.falselist, $9);
+        backpatch($8, tac_count); 
     }
-    | WHILE { 
-        $<str>$ = new_label(); 
-        emit("label", "", "", $<str>$); 
-    } '(' condition ')' { 
-        $<str>$ = new_label(); 
-        emit("ifFalse", $4.place, "", $<str>$); 
-    } statement { 
-        emit("goto", "", "", $<str>2); 
-        emit("label", "", "", $<str>6); 
+    | WHILE M '(' condition ')' M statement { 
+        backpatch($4.truelist, $6);
+        char buf[20]; sprintf(buf, "%d", $2);
+        emit("goto", "", "", buf); 
+        backpatch($4.falselist, tac_count); 
     }
-    | FOR '(' for_init ';' { 
-        $<str>$ = new_label(); 
-        emit("label", "", "", $<str>$); 
-    } condition ';' { 
-        char** arr = malloc(3 * sizeof(char*));
-        arr[0] = new_label(); 
-        arr[1] = new_label(); 
-        arr[2] = new_label(); 
-        emit("ifFalse", $6.place, "", arr[0]); 
-        emit("goto", "", "", arr[1]); 
-        emit("label", "", "", arr[2]); 
-        $<lbls>$ = arr;
-    } for_update ')' { 
-        char** arr = $<lbls>8;
-        emit("goto", "", "", $<str>5); 
-        emit("label", "", "", arr[1]); 
-        $<lbls>$ = arr;
-    } statement { 
-        char** arr = $<lbls>11;
-        emit("goto", "", "", arr[2]); 
-        emit("label", "", "", arr[0]); 
-        free(arr);
+    | FOR '(' for_init ';' M condition ';' M for_update N ')' M statement { 
+        backpatch($6.truelist, $12);
+        backpatch($10, $5);
+        char buf[20]; sprintf(buf, "%d", $8);
+        emit("goto", "", "", buf);
+        backpatch($6.falselist, tac_count); 
     }
     | RETURN expr ';' { 
         emit("return", $2.place, "", ""); 
     }
-    | '{' { enter_scope(); } statements '}' { exit_scope(); }  /* <--- UPDATE THIS LINE */
+    | '{' { enter_scope(); } statements '}' { exit_scope(); }
     | ';'
     ;
 
 condition:
-    expr EQ expr { 
-        strcpy($$.place, new_temp()); 
-        emit("==", $1.place, $3.place, $$.place); 
+    condition AND M condition {
+        backpatch($1.truelist, $3);
+        $$.truelist = $4.truelist;
+        $$.falselist = merge($1.falselist, $4.falselist);
     }
-    | expr EGT expr { 
-        strcpy($$.place, new_temp()); 
-        emit(">=", $1.place, $3.place, $$.place); 
+    | condition OR M condition {
+        backpatch($1.falselist, $3);
+        $$.truelist = merge($1.truelist, $4.truelist);
+        $$.falselist = $4.falselist;
     }
-    | expr ELT expr { 
-        strcpy($$.place, new_temp()); 
-        emit("<=", $1.place, $3.place, $$.place); 
+    | NOT condition {
+        $$.truelist = $2.falselist;
+        $$.falselist = $2.truelist;
     }
-    | expr GT expr { 
-        strcpy($$.place, new_temp()); 
-        emit(">", $1.place, $3.place, $$.place); 
-    }
-    | expr LT expr { 
-        strcpy($$.place, new_temp()); 
-        emit("<", $1.place, $3.place, $$.place); 
+    | '(' condition ')' { $$ = $2; }
+    | expr EQ expr { 
+        char* t = new_temp();
+        emit("==", $1.place, $3.place, t);
+        $$.falselist = makelist(tac_count);
+        emit("ifFalse", t, "", "-1");
+        $$.truelist = makelist(tac_count);
+        emit("goto", "", "", "-1"); 
     }
     | expr NE expr { 
-        strcpy($$.place, new_temp()); 
-        emit("!=", $1.place, $3.place, $$.place); 
+        char* t = new_temp();
+        emit("!=", $1.place, $3.place, t);
+        $$.falselist = makelist(tac_count);
+        emit("ifFalse", t, "", "-1");
+        $$.truelist = makelist(tac_count);
+        emit("goto", "", "", "-1"); 
+    }
+    | expr GT expr { 
+        char* t = new_temp();
+        emit(">", $1.place, $3.place, t);
+        $$.falselist = makelist(tac_count);
+        emit("ifFalse", t, "", "-1");
+        $$.truelist = makelist(tac_count);
+        emit("goto", "", "", "-1"); 
+    }
+    | expr LT expr { 
+        char* t = new_temp();
+        emit("<", $1.place, $3.place, t);
+        $$.falselist = makelist(tac_count);
+        emit("ifFalse", t, "", "-1");
+        $$.truelist = makelist(tac_count);
+        emit("goto", "", "", "-1"); 
+    }
+    | expr EGT expr { 
+        char* t = new_temp();
+        emit(">=", $1.place, $3.place, t);
+        $$.falselist = makelist(tac_count);
+        emit("ifFalse", t, "", "-1");
+        $$.truelist = makelist(tac_count);
+        emit("goto", "", "", "-1"); 
+    }
+    | expr ELT expr { 
+        char* t = new_temp();
+        emit("<=", $1.place, $3.place, t);
+        $$.falselist = makelist(tac_count);
+        emit("ifFalse", t, "", "-1");
+        $$.truelist = makelist(tac_count);
+        emit("goto", "", "", "-1"); 
     }
     | VAR { 
-        check_undeclared($1); 
-        strcpy($$.place, $1); 
+        check_undeclared($1);
+        char* t = new_temp();
+        emit("!=", $1, "0", t); 
+        $$.falselist = makelist(tac_count);
+        emit("ifFalse", t, "", "-1");
+        $$.truelist = makelist(tac_count);
+        emit("goto", "", "", "-1");
     }
     ;
 
@@ -274,8 +309,9 @@ void yyerror(const char* s){
 
 int main(){
     if(yyparse() == 0){
-        printf("Parsing completed successfully. No lexical or syntax errors found.\n");
+        finish_backpatching();  /* <-- CALL THE BRIDGE BEFORE PRINTING */
         
+        printf("Parsing completed successfully.\n");
         print_symbol_table();
         print_tac();
         optimize_tac();
