@@ -13,10 +13,10 @@ void enter_scope() {
 
 void exit_scope() {
     /* When leaving a block, delete all variables declared inside it */
-    while (symbol_count > 0 && symbol_table[symbol_count - 1].scope == current_scope) {
-        free(symbol_table[symbol_count - 1].name); // Free memory
-        symbol_count--; // Shrink the table
-    }
+    // while (symbol_count > 0 && symbol_table[symbol_count - 1].scope == current_scope) {
+    //     free(symbol_table[symbol_count - 1].name); // Free memory
+    //     symbol_count--; // Shrink the table
+    // }
     current_scope--;
 }
 
@@ -61,4 +61,19 @@ int get_symbol_type(char* name) {
         }
     }
     return -1;
+}
+
+/* ... (Keep all your existing code in semantic.c) ... */
+
+void print_symbol_table() {
+    printf("\n--- Phase 3: Semantic Analysis (Symbol Table) ---\n");
+    printf("%-15s %-10s %-10s\n", "Variable Name", "Data Type", "Scope Level");
+    printf("------------------------------------------\n");
+    for (int i = 0; i < symbol_count; i++) {
+        // Type 1 is Integer, 2 is Float (from parser.y rules)
+        char* type_str = (symbol_table[i].type == 1) ? "INT" : "FLOAT";
+        printf("%-15s %-10s %-10d\n", 
+            symbol_table[i].name, type_str, symbol_table[i].scope);
+    }
+    printf("------------------------------------------\n");
 }

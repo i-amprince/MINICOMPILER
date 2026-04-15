@@ -14,5 +14,6 @@ int get_symbol_type(char* name);
 
 void enter_scope();
 void exit_scope();
+void print_symbol_table();
 
 #endif

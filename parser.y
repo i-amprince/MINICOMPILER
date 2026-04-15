@@ -266,15 +266,21 @@ expr:
 
 %%
 
+extern int yylineno; 
+
 void yyerror(const char* s){
-    printf("Parsing error %s\n",s);
+    printf("Syntax Error on line %d: %s\n", yylineno, s);
 }
 
 int main(){
     if(yyparse() == 0){
+        printf("Parsing completed successfully. No lexical or syntax errors found.\n");
+        
+        print_symbol_table();
         print_tac();
         optimize_tac();
         generate_assembly();
+        printf("\nCompilation Process Finished Successfully!\n");
     } else {
         printf("\nCompilation Error\n");
     }
