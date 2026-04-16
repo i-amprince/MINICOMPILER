@@ -12,19 +12,22 @@ void enter_scope() {
 }
 
 void exit_scope() {
-    /* When leaving a block, delete all variables declared inside it */
-    // while (symbol_count > 0 && symbol_table[symbol_count - 1].scope == current_scope) {
-    //     free(symbol_table[symbol_count - 1].name); // Free memory
-    //     symbol_count--; // Shrink the table
-    // }
+    /* Instead of deleting, just mark variables in the current scope as inactive */
+    for (int i = symbol_count - 1; i >= 0; i--) {
+        if (symbol_table[i].scope == current_scope) {
+            symbol_table[i].is_active = 0; // Deactivate it!
+        } else if (symbol_table[i].scope < current_scope) {
+            break; // We've reached an outer scope, stop searching
+        }
+    }
     current_scope--;
 }
 
 int check_symbol_current_scope(char* name) {
-    /* Only check for duplicates in the EXACT SAME scope */
+    /* Only check for duplicates in the EXACT SAME scope that are ACTIVE */
     for (int i = symbol_count - 1; i >= 0; i--) {
         if (symbol_table[i].scope != current_scope) break; // We left the current scope
-        if (strcmp(symbol_table[i].name, name) == 0) {
+        if (symbol_table[i].is_active && strcmp(symbol_table[i].name, name) == 0) {
             return 1;
         }
     }
@@ -39,14 +42,15 @@ void add_symbol(char* name, int type) {
     symbol_table[symbol_count].name = strdup(name);
     symbol_table[symbol_count].type = type;
     symbol_table[symbol_count].scope = current_scope;
+    symbol_table[symbol_count].is_active = 1; /* NEW: Mark as active when created */
     symbol_count++;
 }
 
 void check_undeclared(char* name) {
-    /* Search backwards to find the closest local variable first */
+    /* Search backwards, but ONLY match active variables */
     for (int i = symbol_count - 1; i >= 0; i--) {
-        if (strcmp(symbol_table[i].name, name) == 0) {
-            return; // Found it!
+        if (symbol_table[i].is_active && strcmp(symbol_table[i].name, name) == 0) {
+            return; // Found an active variable!
         }
     }
     printf("Semantic error: undeclared variable '%s'\n", name);
@@ -54,21 +58,21 @@ void check_undeclared(char* name) {
 }
 
 int get_symbol_type(char* name) {
-    /* Search backwards to find the closest local variable first */
+    /* Search backwards, but ONLY match active variables */
     for (int i = symbol_count - 1; i >= 0; i--) {
-        if (strcmp(symbol_table[i].name, name) == 0) {
+        if (symbol_table[i].is_active && strcmp(symbol_table[i].name, name) == 0) {
             return symbol_table[i].type;
         }
     }
     return -1;
 }
 
-/* ... (Keep all your existing code in semantic.c) ... */
-
 void print_symbol_table() {
     printf("\n--- Phase 3: Semantic Analysis (Symbol Table) ---\n");
     printf("%-15s %-10s %-10s\n", "Variable Name", "Data Type", "Scope Level");
     printf("------------------------------------------\n");
+    
+    /* Prints ALL variables in the table regardless of active status */
     for (int i = 0; i < symbol_count; i++) {
         // Type 1 is Integer, 2 is Float (from parser.y rules)
         char* type_str = (symbol_table[i].type == 1) ? "INT" : "FLOAT";

@@ -8,7 +8,9 @@ typedef struct {
     char res[20];
 } TAC;
 
-/* --- NEW: Backpatching Structure --- */
+
+
+
 typedef struct {
     int list[100];
     int count;
@@ -19,12 +21,14 @@ extern int tac_count;
 
 char* new_temp();
 char* new_label();
+
+
 void emit(char* op, char* arg1, char* arg2, char* res);
 void print_tac();
 void optimize_tac();
 void generate_assembly();
 
-/* --- NEW: Backpatching Methods --- */
+
 IntList makelist(int index);
 IntList merge(IntList l1, IntList l2);
 void backpatch(IntList l, int target);

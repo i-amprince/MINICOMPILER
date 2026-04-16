@@ -1,9 +1,9 @@
 %{
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include "semantic.h"
-#include "tac.h"
+#include<stdio.h>
+#include<string.h>
+#include<stdlib.h>
+#include"semantic.h"
+#include"tac.h"
 
 void yyerror(const char* str);
 int yylex();
@@ -25,7 +25,7 @@ int yylex();
     int instr;              /* NEW: Added for line indexing */
 }
 
-%type <str> if_prefix
+
 %type <expr_val> expr
 %type <cond> condition
 %type <instr> M
@@ -36,7 +36,7 @@ int yylex();
 %token <str> VAR
 %token <str> STRING_LITERAL
 
-%token INT IF ELSE FOR WHILE INCLUDE_STMT RETURN
+%token INT FLOAT IF ELSE FOR WHILE INCLUDE_STMT RETURN
 %token AND OR INC DEC PLUSEQ MINUSEQ
 %token EQ EGT ELT NE ADD SUB MUL DIV GT LT NOT
 
@@ -51,6 +51,9 @@ int yylex();
 %right UMINUS /* Added: Unary minus precedence (highest math precedence) */
 %nonassoc LOWER_THAN_ELSE
 %nonassoc ELSE
+
+
+%expect 1  /* <-- ADD THIS LINE HERE */
 
 %%
 
@@ -78,11 +81,8 @@ statements:
     ;
 
 assign_expr:
-    INT VAR '=' expr { 
-        add_symbol($2,1); 
-        emit("=", $4.place, "", $2);
-    }
-    | VAR '=' expr { 
+    
+    VAR '=' expr { 
         check_undeclared($1);
         if(get_symbol_type($1) != $3.dtype){ exit(1); }
         emit("=", $3.place, "", $1);
@@ -101,47 +101,67 @@ assign_expr:
         emit("-", $1, $3.place, t);
         emit("=", t, "", $1);
     }
-    | VAR INC {
-        check_undeclared($1);
-        if(get_symbol_type($1)!=1){ exit(1); }
-        char* t = new_temp();
-        emit("+", $1, "1", t);
-        emit("=", t, "", $1);
-    }
-    | VAR DEC { 
-        check_undeclared($1);
-        if(get_symbol_type($1)!=1){ exit(1); }
-        char* t = new_temp();
-        emit("-", $1, "1", t);
-        emit("=", t, "", $1);
-    }
+    
     ;
 
 declaration: 
-    INT var_list ';' { }
+    INT int_var_list ';' { }
+    | FLOAT float_var_list ';' { }
     ;
 
-var_list: 
-    VAR { add_symbol($1,1); }
-    | var_list ',' VAR { add_symbol($3,1); }
+int_var_list: 
+    int_var_decl
+    | int_var_list ',' int_var_decl
+    ;
+
+int_var_decl:
+    VAR { 
+        add_symbol($1, 1); 
+    }
+    | VAR '=' expr { 
+        add_symbol($1, 1);
+        if ($3.dtype != 1) { 
+            printf("Semantic Error: Type mismatch in declaration of '%s'\n", $1);
+            exit(1); 
+        }
+        emit("=", $3.place, "", $1);
+    }
+    ;
+
+float_var_list: 
+    float_var_decl
+    | float_var_list ',' float_var_decl
+    ;
+
+float_var_decl:
+    VAR { 
+        add_symbol($1, 2); /* 2 signifies Float */
+    }
+    | VAR '=' expr { 
+        add_symbol($1, 2);
+        if ($3.dtype != 2) { 
+            printf("Semantic Error: Type mismatch in declaration of '%s'\n", $1);
+            exit(1); 
+        }
+        emit("=", $3.place, "", $1);
+    }
     ;
 
 for_init:
-    assign_expr
-    | 
+    assign_expr           /* For existing variables: for(i = 0; ...) */
+    | expr                /* For inline math: for(i++; ...) */
+    | INT int_var_list    /* NEW: For new int declarations: for(int i = 0; ...) */
+    | FLOAT float_var_list/* NEW: For new float declarations: for(float f = 0.5; ...) */
+    |                     /* Allows an empty init block: for(; i < 10; ...) */
     ;
 
 for_update:
     assign_expr
+    | expr
     | 
     ;
 
-if_prefix:
-    IF '(' condition ')' { 
-        $$ = new_label(); 
-        emit("ifFalse", $3.place, "", $$); 
-    }
-    ;
+
 
 M: /* empty */ { $$ = tac_count; } ;
 N: /* empty */ { $$ = makelist(tac_count); emit("goto", "", "", "-1"); } ;
@@ -150,6 +170,7 @@ N: /* empty */ { $$ = makelist(tac_count); emit("goto", "", "", "-1"); } ;
 statement:
     declaration
     | assign_expr ';'
+    | expr ';'
     | IF '(' condition ')' M statement %prec LOWER_THAN_ELSE { 
         backpatch($3.truelist, $5);
         backpatch($3.falselist, tac_count); 
@@ -195,60 +216,15 @@ condition:
         $$.falselist = $2.truelist;
     }
     | '(' condition ')' { $$ = $2; }
-    | expr EQ expr { 
+    | expr { 
         char* t = new_temp();
-        emit("==", $1.place, $3.place, t);
+        /* We compare the evaluated expression ($1) to zero */
+        emit("!=", $1.place, "0", t); 
+        
+        /* Generate the standard Backpatching blank targets */
         $$.falselist = makelist(tac_count);
         emit("ifFalse", t, "", "-1");
-        $$.truelist = makelist(tac_count);
-        emit("goto", "", "", "-1"); 
-    }
-    | expr NE expr { 
-        char* t = new_temp();
-        emit("!=", $1.place, $3.place, t);
-        $$.falselist = makelist(tac_count);
-        emit("ifFalse", t, "", "-1");
-        $$.truelist = makelist(tac_count);
-        emit("goto", "", "", "-1"); 
-    }
-    | expr GT expr { 
-        char* t = new_temp();
-        emit(">", $1.place, $3.place, t);
-        $$.falselist = makelist(tac_count);
-        emit("ifFalse", t, "", "-1");
-        $$.truelist = makelist(tac_count);
-        emit("goto", "", "", "-1"); 
-    }
-    | expr LT expr { 
-        char* t = new_temp();
-        emit("<", $1.place, $3.place, t);
-        $$.falselist = makelist(tac_count);
-        emit("ifFalse", t, "", "-1");
-        $$.truelist = makelist(tac_count);
-        emit("goto", "", "", "-1"); 
-    }
-    | expr EGT expr { 
-        char* t = new_temp();
-        emit(">=", $1.place, $3.place, t);
-        $$.falselist = makelist(tac_count);
-        emit("ifFalse", t, "", "-1");
-        $$.truelist = makelist(tac_count);
-        emit("goto", "", "", "-1"); 
-    }
-    | expr ELT expr { 
-        char* t = new_temp();
-        emit("<=", $1.place, $3.place, t);
-        $$.falselist = makelist(tac_count);
-        emit("ifFalse", t, "", "-1");
-        $$.truelist = makelist(tac_count);
-        emit("goto", "", "", "-1"); 
-    }
-    | VAR { 
-        check_undeclared($1);
-        char* t = new_temp();
-        emit("!=", $1, "0", t); 
-        $$.falselist = makelist(tac_count);
-        emit("ifFalse", t, "", "-1");
+        
         $$.truelist = makelist(tac_count);
         emit("goto", "", "", "-1");
     }
@@ -296,6 +272,97 @@ expr:
         $$.dtype = $1.dtype;
         strcpy($$.place, new_temp());
         emit("/", $1.place, $3.place, $$.place);
+    }
+    | '(' expr ')' { 
+        $$.dtype=$2.dtype;
+        strcpy($$.place,$2.place);
+    }
+    /* Post-increment (a++) */
+    | VAR INC { 
+        check_undeclared($1);
+        if(get_symbol_type($1) != 1){ exit(1); }
+        
+        $$.dtype = 1;
+        /* 1. Save original value to be used in the surrounding math expression */
+        char* val_temp = new_temp();
+        emit("=", $1, "", val_temp);
+        strcpy($$.place, val_temp);
+        
+        /* 2. Perform the increment side-effect in memory */
+        char* inc_temp = new_temp();
+        emit("+", $1, "1", inc_temp);
+        emit("=", inc_temp, "", $1);
+    }
+    /* Post-decrement (a--) */
+    | VAR DEC { 
+        check_undeclared($1);
+        if(get_symbol_type($1) != 1){ exit(1); }
+        
+        $$.dtype = 1;
+        char* val_temp = new_temp();
+        emit("=", $1, "", val_temp);
+        strcpy($$.place, val_temp);
+        
+        char* dec_temp = new_temp();
+        emit("-", $1, "1", dec_temp);
+        emit("=", dec_temp, "", $1);
+    }
+    /* Pre-increment (++a) */
+    | INC VAR { 
+        check_undeclared($2);
+        if(get_symbol_type($2) != 1){ exit(1); }
+        
+        $$.dtype = 1;
+        /* 1. Perform the increment FIRST */
+        char* inc_temp = new_temp();
+        emit("+", $2, "1", inc_temp);
+        emit("=", inc_temp, "", $2);
+        
+        /* 2. Use the new updated value for the surrounding math expression */
+        strcpy($$.place, $2);
+    }
+    /* Pre-decrement (--a) */
+    | DEC VAR { 
+        check_undeclared($2);
+        if(get_symbol_type($2) != 1){ exit(1); }
+        
+        $$.dtype = 1;
+        char* dec_temp = new_temp();
+        emit("-", $2, "1", dec_temp);
+        emit("=", dec_temp, "", $2);
+        
+        strcpy($$.place, $2);
+    }
+    /* Relational Operators as Expressions */
+    | expr EQ expr { 
+        $$.dtype = 1; 
+        strcpy($$.place, new_temp());
+        emit("==", $1.place, $3.place, $$.place);
+    }
+    | expr NE expr { 
+        $$.dtype = 1;
+        strcpy($$.place, new_temp());
+        emit("!=", $1.place, $3.place, $$.place);
+    }
+    | expr GT expr { 
+        $$.dtype = 1;
+        strcpy($$.place, new_temp());
+        emit(">", $1.place, $3.place, $$.place);
+    }
+    | expr LT expr { 
+        $$.dtype = 1;
+        strcpy($$.place, new_temp());
+        emit("<", $1.place, $3.place, $$.place);
+    }
+    | expr EGT expr { 
+        $$.dtype = 1;
+        strcpy($$.place, new_temp());
+        emit(">=", $1.place, $3.place, $$.place);
+    }
+    | expr ELT expr { 
+        $$.dtype = 1;
+        strcpy($$.place, new_temp());
+        emit("<=", $1.place, $3.place, $$.place);
     }
     ;
 
