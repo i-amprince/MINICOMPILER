@@ -1,4 +1,4 @@
-# 📄 Mini C-Compiler (Toy-C) – Detailed Project Report
+#  Mini C-Compiler (Toy-C) – Detailed Project Report
 
 **Course:** Compiler Design Lab  
 **Project Title:** Compiler for Toy-C  
