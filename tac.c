@@ -43,19 +43,21 @@ void print_tac(){
     for(int i=0;i<tac_count;i++){
         if(strcmp(tac_table[i].op,"label")==0){
 
+
             printf("%3d: %s:\n",i,tac_table[i].res);
         } 
         else if(strcmp(tac_table[i].op,"goto")==0){
+
             printf("%3d: \tgoto %s\n",i,tac_table[i].res);
         } 
         else if(strcmp(tac_table[i].op,"ifFalse")==0){
-            printf("%3d: \tifFalse %s goto %s\n",i,tac_table[i].arg1,tac_table[i].res);
+               printf("%3d: \tifFalse %s goto %s\n",i,tac_table[i].arg1,tac_table[i].res);
         } 
         else if(strcmp(tac_table[i].op,"return")==0){
             printf("%3d: \treturn %s\n",i,tac_table[i].arg1);
         } 
-        else if(strcmp(tac_table[i].op, "=") == 0){
-            printf("%3d: \t%s = %s\n",i,tac_table[i].res,tac_table[i].arg1);
+        else if(strcmp(tac_table[i].op, "=")==0){
+               printf("%3d: \t%s = %s\n",i,tac_table[i].res,tac_table[i].arg1);
 
         } 
         else{
@@ -91,9 +93,9 @@ void optimize_tac(){
 
 
     for(int i=0;i<tac_count;i++){
-        if(strcmp(tac_table[i].op,"label")== 0 || strcmp(tac_table[i].op,"goto")==0 || strcmp(tac_table[i].op,"ifFalse")==0){
-            const_count=0; 
-            continue;
+        if(strcmp(tac_table[i].op,"label")==0 || strcmp(tac_table[i].op,"goto")==0 || strcmp(tac_table[i].op,"ifFalse")==0){
+               const_count=0; 
+               continue;
         }
 
 
@@ -101,21 +103,21 @@ void optimize_tac(){
         for(int c=0;c<const_count;c++){
 
             if(strcmp(tac_table[i].arg1,const_vars[c])==0){
-                strcpy(tac_table[i].arg1,const_vals[c]);
+                   strcpy(tac_table[i].arg1,const_vals[c]);
             }
 
             if(strcmp(tac_table[i].arg2,const_vars[c])==0){
 
-                strcpy(tac_table[i].arg2, const_vals[c]);
+                   strcpy(tac_table[i].arg2, const_vals[c]);
             }
         }
 
         if(is_number(tac_table[i].arg1) && is_number(tac_table[i].arg2) && strcmp(tac_table[i].op,"=")!=0){
             
-            int v1=atoi(tac_table[i].arg1);
-            int v2=atoi(tac_table[i].arg2);
-            int res_val=0;
-            int opt=1;
+                int v1=atoi(tac_table[i].arg1);
+                int v2=atoi(tac_table[i].arg2);
+                int res_val=0;
+                int opt=1;
 
 
 
@@ -159,8 +161,7 @@ void optimize_tac(){
 
 
     for(int i=0;i<tac_count;i++){
-        if(strcmp(tac_table[i].op,"label")==0 || 
-            strcmp(tac_table[i].op,"goto")==0 || 
+        if(strcmp(tac_table[i].op,"label")==0 || strcmp(tac_table[i].op,"goto")==0 || 
               strcmp(tac_table[i].op,"ifFalse")==0 || 
             strcmp(tac_table[i].op,"=")==0 ||
                 strcmp(tac_table[i].op,"return")==0){
@@ -168,10 +169,9 @@ void optimize_tac(){
         }
 
         for(int j=i-1;j>=0;j--){
-            if(strcmp(tac_table[j].op, "label")==0 || 
-                strcmp(tac_table[j].op,"goto")==0 || 
+            if(strcmp(tac_table[j].op, "label")==0 || strcmp(tac_table[j].op,"goto")==0 || 
                 strcmp(tac_table[j].op,"ifFalse")==0){
-                break; 
+                   break; 
             }
 
             if(strcmp(tac_table[i].op, tac_table[j].op)==0 && strcmp(tac_table[i].arg1, tac_table[j].arg1)==0 && 
@@ -193,7 +193,7 @@ void optimize_tac(){
     for(int i=0;i<tac_count;i++){
         
         if(tac_table[i].res[0]=='t' && tac_table[i].res[1]>='0' && tac_table[i].res[1]<='9'){
-            int is_used=0;
+               int is_used=0;
             
             
             for(int j=i+1;j<tac_count;j++){
@@ -246,8 +246,8 @@ IntList makelist(int index){
 }
 
 IntList merge(IntList l1, IntList l2){
-    IntList res;
-    res.count=0;
+      IntList res;
+      res.count=0;
 
 
     for(int i=0;i<l1.count;i++) res.list[res.count++]=l1.list[i];

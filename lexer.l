@@ -16,11 +16,11 @@
 "/*"      { 
             
                 int c;
-              while((c=input())!=EOF && c!=0){
-                     if(c=='*'){
-                      if((c=input())=='/') 
-                          break;
-                      else 
+                    while((c=input())!=EOF && c!=0){
+                        if(c=='*'){
+                          if((c=input())=='/') 
+                            break;
+                          else 
                             unput(c);
                   }
               }
@@ -71,7 +71,7 @@
 "++"      { PRINT_TOKEN("INC"); 
             return INC; 
             }
-"--"      { PRINT_TOKEN("DEC"); 
+"--"      {     PRINT_TOKEN("DEC"); 
               return DEC; 
             }
 "+="      { PRINT_TOKEN("PLUSEQ"); 
@@ -90,7 +90,7 @@
              return ELT; 
              }
 "!="      { PRINT_TOKEN("NE");
-             return NE; 
+                return NE; 
              }
 "+"       { PRINT_TOKEN("ADD");
              return ADD; 
@@ -102,7 +102,7 @@
              return MUL; 
              }
 "/"       { PRINT_TOKEN("DIV"); 
-            return DIV; 
+               return DIV; 
             }
 "="       {     PRINT_TOKEN("ASSIGN"); 
                 return '='; 
