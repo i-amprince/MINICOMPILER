@@ -1,10 +1,9 @@
+//for and compound
 int main() {
-    int sum;
-    sum = 0;
-    
-    for (int i = 0; i < 5; i++) {
-        sum = sum + i;
+    int total;
+    total = 100;
+    for (int j = 0; j < 5; j++) {
+        total -= 10;
     }
-    
-    return sum;
+    return total;
 }

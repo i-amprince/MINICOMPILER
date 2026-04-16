@@ -1,13 +1,11 @@
+//while and unirayy operators
 int main() {
-    int x, y, max;
-    x = 45;
-    y = 60;
-    
-    if (x > y) {
-        max = x;
-    } else {
-        max = y;
+    int i, sum;
+    i = 1;
+    sum = 0;
+    while (i < 11) {
+        sum = sum + i;
+        i++;
     }
-    
-    return max;
+    return sum;
 }

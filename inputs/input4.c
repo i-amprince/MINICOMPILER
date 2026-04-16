@@ -1,14 +1,16 @@
+//folding and optimistaionss
 int main() {
-    int a;
-    a = 100; 
-
-    if (a > 50) {
-        int a;   // Shadows the outer 'a'
-        a = 5;   
-        int b;
-        b = a + 10; // Uses inner 'a' (5)
-    }
-
-    a = a + 1; // Uses outer 'a' (100)
-    return a;
+    int x;
+    int y;
+    int z;
+    
+    
+    x = 10 + 20; 
+    y = x * 2;   
+    
+    int unused;
+    unused = 999;
+    
+    z = y - x;
+    return z;
 }
