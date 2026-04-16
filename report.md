@@ -494,7 +494,7 @@ sw $t0, a
 
 ---
 
-## 10. 🧩 ISA Details (MIPS32 Subset)
+## 10.  ISA Details (MIPS32 Subset)
 
 We used a **restricted MIPS32 RISC ISA** with limited registers
 
