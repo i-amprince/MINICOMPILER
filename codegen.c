@@ -127,5 +127,16 @@ void generate_assembly() {
             printf("\tslt $t2, $t0, $t1\n");
             printf("\tsw $t2, %s\n", t.res);
         }
+        else if (strcmp(t.op, ">=") == 0) {
+            load_reg("$t0", t.arg1);
+            load_reg("$t1", t.arg2);
+            printf("\tsge $t2, $t0, $t1\n"); // sge: Set Greater than or Equal
+            printf("\tsw $t2, %s\n", t.res);
+        } else if (strcmp(t.op, "<=") == 0) {
+            load_reg("$t0", t.arg1);
+            load_reg("$t1", t.arg2);
+            printf("\tsle $t2, $t0, $t1\n"); // sle: Set Less than or Equal
+            printf("\tsw $t2, %s\n", t.res);
+        }
     }
 }

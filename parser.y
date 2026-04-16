@@ -5,6 +5,8 @@
 #include"semantic.h"
 #include"tac.h"
 
+extern int yylineno;
+
 void yyerror(const char* str);
 int yylex();
 %}
@@ -70,6 +72,7 @@ main_func:
     INT VAR '(' ')' '{' { enter_scope(); } statements '}' {
         exit_scope();
         if(strcmp($2,"main")!=0){
+            printf("Semantic Error on line %d: Missing Main function.\n", yylineno); exit(1);
             exit(1);
         }
     }
@@ -84,19 +87,19 @@ assign_expr:
     
     VAR '=' expr { 
         check_undeclared($1);
-        if(get_symbol_type($1) != $3.dtype){ exit(1); }
+        if(get_symbol_type($1) != $3.dtype){ printf("Semantic Error on line %d: Mismatch found.\n", yylineno); exit(1); }
         emit("=", $3.place, "", $1);
     }
     | VAR PLUSEQ expr { 
         check_undeclared($1); 
-        if(get_symbol_type($1) != $3.dtype){ exit(1); }
+        if(get_symbol_type($1) != $3.dtype){ printf("Semantic Error on line %d: Mismatch found.\n", yylineno); exit(1); }
         char* t = new_temp();
         emit("+", $1, $3.place, t);
         emit("=", t, "", $1);
     }
     | VAR MINUSEQ expr { 
         check_undeclared($1); 
-        if(get_symbol_type($1) != $3.dtype){ exit(1); }
+        if(get_symbol_type($1) != $3.dtype){ printf("Semantic Error on line %d: Mismatch found.\n", yylineno); exit(1); }
         char* t = new_temp();
         emit("-", $1, $3.place, t);
         emit("=", t, "", $1);
@@ -121,7 +124,6 @@ int_var_decl:
     | VAR '=' expr { 
         add_symbol($1, 1);
         if ($3.dtype != 1) { 
-            printf("Semantic Error: Type mismatch in declaration of '%s'\n", $1);
             exit(1); 
         }
         emit("=", $3.place, "", $1);
@@ -250,25 +252,25 @@ expr:
         emit("-", "0", $2.place, $$.place); /* Translates -5 into 0 - 5 */
     }
     | expr ADD expr { 
-        if($1.dtype != $3.dtype){ exit(1); }
+        if($1.dtype != $3.dtype){ printf("Semantic Error on line %d: Mismatch found.\n", yylineno); exit(1); }
         $$.dtype = $1.dtype;
         strcpy($$.place, new_temp());
         emit("+", $1.place, $3.place, $$.place);
     }
     | expr SUB expr { 
-        if($1.dtype != $3.dtype){ exit(1); }
+        if($1.dtype != $3.dtype){ printf("Semantic Error on line %d: Mismatch found.\n", yylineno); exit(1); }
         $$.dtype = $1.dtype;
         strcpy($$.place, new_temp());
         emit("-", $1.place, $3.place, $$.place);
     }
     | expr MUL expr { 
-        if($1.dtype != $3.dtype){ exit(1); }
+        if($1.dtype != $3.dtype){ printf("Semantic Error on line %d: Mismatch found.\n", yylineno); exit(1); }
         $$.dtype = $1.dtype;
         strcpy($$.place, new_temp());
         emit("*", $1.place, $3.place, $$.place);
     }
     | expr DIV expr { 
-        if($1.dtype != $3.dtype){ exit(1); }
+        if($1.dtype != $3.dtype){ printf("Semantic Error on line %d: Mismatch found.\n", yylineno); exit(1); }
         $$.dtype = $1.dtype;
         strcpy($$.place, new_temp());
         emit("/", $1.place, $3.place, $$.place);
@@ -280,7 +282,7 @@ expr:
     /* Post-increment (a++) */
     | VAR INC { 
         check_undeclared($1);
-        if(get_symbol_type($1) != 1){ exit(1); }
+        if(get_symbol_type($1) != 1){ printf("Semantic Error on line %d: Operation failed.\n", yylineno); exit(1); }
         
         $$.dtype = 1;
         /* 1. Save original value to be used in the surrounding math expression */
@@ -296,7 +298,7 @@ expr:
     /* Post-decrement (a--) */
     | VAR DEC { 
         check_undeclared($1);
-        if(get_symbol_type($1) != 1){ exit(1); }
+        if(get_symbol_type($1) != 1){ printf("Semantic Error on line %d: Operation failed.\n", yylineno); exit(1); }
         
         $$.dtype = 1;
         char* val_temp = new_temp();
@@ -310,7 +312,7 @@ expr:
     /* Pre-increment (++a) */
     | INC VAR { 
         check_undeclared($2);
-        if(get_symbol_type($2) != 1){ exit(1); }
+        if(get_symbol_type($2) != 1){ printf("Semantic Error on line %d: Operation failed.\n", yylineno); exit(1); }
         
         $$.dtype = 1;
         /* 1. Perform the increment FIRST */
@@ -324,7 +326,7 @@ expr:
     /* Pre-decrement (--a) */
     | DEC VAR { 
         check_undeclared($2);
-        if(get_symbol_type($2) != 1){ exit(1); }
+        if(get_symbol_type($2) != 1){ printf("Semantic Error on line %d: Operation failed.\n", yylineno); exit(1); }
         
         $$.dtype = 1;
         char* dec_temp = new_temp();
