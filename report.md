@@ -41,7 +41,7 @@ Lexical Analysis -> Tokens
    ↓
 Syntax Analysis -> Parse Tree
    ↓
-Semantic Analysis -> Checked AST + Symbol Table
+Semantic Analysis ->  Symbol Table
    ↓
 Intermediate Code (TAC)
    ↓
