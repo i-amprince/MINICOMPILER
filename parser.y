@@ -13,18 +13,18 @@ int yylex();
 
 %union {
     char* str;
-    int num;
-    float fnum;
+      int num;
+      float fnum;
     struct {
         int dtype;
         char place[20];
     } expr_val;
-    struct {                /* NEW: Added for boolean backpatching */
+    struct {      
         IntList truelist;
         IntList falselist;
     } cond;
-    IntList intlist;        /* NEW: Added for jump tracking */
-    int instr;              /* NEW: Added for line indexing */
+    IntList intlist;
+    int instr;
 }
 
 
@@ -252,25 +252,37 @@ expr:
         emit("-", "0", $2.place, $$.place); /* Translates -5 into 0 - 5 */
     }
     | expr ADD expr { 
-        if($1.dtype != $3.dtype){ printf("Semantic Error on line %d: Mismatch found.\n", yylineno); exit(1); }
+        if($1.dtype != $3.dtype){ 
+            printf("Semantic error on line %d type mismatch\n",yylineno);
+            exit(1); 
+            }
         $$.dtype = $1.dtype;
         strcpy($$.place, new_temp());
         emit("+", $1.place, $3.place, $$.place);
     }
     | expr SUB expr { 
-        if($1.dtype != $3.dtype){ printf("Semantic Error on line %d: Mismatch found.\n", yylineno); exit(1); }
+        if($1.dtype != $3.dtype){ 
+            printf("Semantic error on line %d type mismatch\n",yylineno);
+            exit(1); 
+            }
         $$.dtype = $1.dtype;
         strcpy($$.place, new_temp());
         emit("-", $1.place, $3.place, $$.place);
     }
     | expr MUL expr { 
-        if($1.dtype != $3.dtype){ printf("Semantic Error on line %d: Mismatch found.\n", yylineno); exit(1); }
+        if($1.dtype != $3.dtype){ 
+            printf("Semantic error on line %d type mismatch\n",yylineno);
+            exit(1); 
+            }
         $$.dtype = $1.dtype;
         strcpy($$.place, new_temp());
         emit("*", $1.place, $3.place, $$.place);
     }
     | expr DIV expr { 
-        if($1.dtype != $3.dtype){ printf("Semantic Error on line %d: Mismatch found.\n", yylineno); exit(1); }
+        if($1.dtype != $3.dtype){ 
+            printf("Semantic error on line %d type mismatch\n",yylineno);
+            exit(1); 
+            }
         $$.dtype = $1.dtype;
         strcpy($$.place, new_temp());
         emit("/", $1.place, $3.place, $$.place);
@@ -282,7 +294,10 @@ expr:
     /* Post-increment (a++) */
     | VAR INC { 
         check_undeclared($1);
-        if(get_symbol_type($1) != 1){ printf("Semantic Error on line %d: Operation failed.\n", yylineno); exit(1); }
+        if(get_symbol_type($1) != 1){ 
+            printf("Semantic/Syntax error on line %d",yylineno);
+            exit(1); 
+            }
         
         $$.dtype = 1;
         /* 1. Save original value to be used in the surrounding math expression */
@@ -298,7 +313,10 @@ expr:
     /* Post-decrement (a--) */
     | VAR DEC { 
         check_undeclared($1);
-        if(get_symbol_type($1) != 1){ printf("Semantic Error on line %d: Operation failed.\n", yylineno); exit(1); }
+        if(get_symbol_type($1) != 1){
+            printf("Semantic error on line %d",yylineno);
+             exit(1); 
+             }
         
         $$.dtype = 1;
         char* val_temp = new_temp();
@@ -312,7 +330,9 @@ expr:
     /* Pre-increment (++a) */
     | INC VAR { 
         check_undeclared($2);
-        if(get_symbol_type($2) != 1){ printf("Semantic Error on line %d: Operation failed.\n", yylineno); exit(1); }
+        if(get_symbol_type($2) != 1){ 
+            printf("Semantic/Syntax error on line %d",yylineno);
+            exit(1); }
         
         $$.dtype = 1;
         /* 1. Perform the increment FIRST */
